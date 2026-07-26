@@ -22,6 +22,7 @@ export const authService = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(userData),
     });
     return handleResponse(response);
@@ -33,7 +34,6 @@ export const authService = {
    * @param {string} password - Password
    */
   async login(emailOrMobile, password) {
-    // Send emailOrMobile as both email and mobile so the backend $or query matches either
     const body = {
       email: emailOrMobile,
       mobile: emailOrMobile,
@@ -45,6 +45,7 @@ export const authService = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(body),
     });
     return handleResponse(response);
@@ -59,6 +60,7 @@ export const authService = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     return handleResponse(response);
   },
@@ -69,6 +71,7 @@ export const authService = {
   async getProducts() {
     const response = await fetch('http://localhost:3000/api/products/all', {
       method: 'GET',
+      credentials: 'include',
     });
     return handleResponse(response);
   }

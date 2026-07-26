@@ -73,5 +73,20 @@ const logoutController = async(req,res)=>{
     }
 }
 
+const userVerifyController = async(req,res)=>{
+    try {
+        const userId = req.user._id;
+        const user = await userModel.findById(userId).select("-password");
+        
+        if(!user){
+            return res.status(404).json({message:"User not found"})
+        }
+        
+        res.status(200).json({message:"User verified successfully",user})
+    } catch (error) {
+        console.error("Error in user verification",error)
+        res.status(500).json({message:"Error verifying user"})
+    }
+}
 
-export {registerController,loginController,logoutController}
+export {registerController,loginController,logoutController,userVerifyController}

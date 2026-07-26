@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from './services/authService';
+import { cartService } from './services/cartService';
 
 function App() {
   // Navigation & Authentication State
@@ -54,10 +55,11 @@ function App() {
     }
   }, []);
 
-  // Fetch products from backend when user accesses dashboard
+  // Fetch products and cart from backend when user accesses dashboard
   useEffect(() => {
     if (currentPage === 'dashboard' && currentUser) {
       fetchProducts();
+      fetchCart();
     }
   }, [currentPage, currentUser]);
 
@@ -69,6 +71,18 @@ function App() {
       }
     } catch (error) {
       showToast('Failed to fetch store products: ' + error.message, 'error');
+    }
+  };
+
+  const fetchCart = async () => {
+    try {
+      const response = await cartService.getCart();
+      if (response && response.cart && Array.isArray(response.cart.items)) {
+        const validItems = response.cart.items.filter(item => item.product != null);
+        setCart(validItems);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
     }
   };
 
@@ -185,43 +199,45 @@ function App() {
   };
 
   // --- Shopping Cart Helper Functions ---
-  const addToCart = (product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(item => item.product._id === product._id);
-      if (existingItem) {
-        return prevCart.map(item => 
-          item.product._id === product._id 
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prevCart, { product, quantity: 1 }];
-    });
-    showToast(`Added "${product.name}" to cart!`);
-  };
-
-  const updateCartQuantity = (productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      setCart(prev => prev.filter(item => item.product._id !== productId));
-      return;
+  const addToCart = async (product, color) => {
+    try {
+      await cartService.addToCart(product._id, 1, color);
+      await fetchCart();
+      showToast(`Added "${product.name}" to cart!`);
+    } catch (error) {
+      showToast('Failed to add to cart: ' + error.message, 'error');
     }
-    setCart(prev => prev.map(item => 
-      item.product._id === productId 
-        ? { ...item, quantity: newQuantity } 
-        : item
-    ));
   };
 
-  const removeFromCart = (productId) => {
-    setCart(prev => prev.filter(item => item.product._id !== productId));
+  const updateCartQuantity = async (productId, newQuantity, color) => {
+    try {
+      if (newQuantity <= 0) {
+        await cartService.removeFromCart(productId, color);
+      } else {
+        await cartService.updateCart(productId, newQuantity, color);
+      }
+      await fetchCart();
+    } catch (error) {
+      showToast('Failed to update cart: ' + error.message, 'error');
+    }
+  };
+
+  const removeFromCart = async (productId, color) => {
+    try {
+      await cartService.removeFromCart(productId, color);
+      await fetchCart();
+      showToast('Item removed from cart');
+    } catch (error) {
+      showToast('Failed to remove item: ' + error.message, 'error');
+    }
   };
 
   // E-Commerce Checkout flow: Subtotal + Taxes (18% GST)
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const cartSubtotal = cart.reduce((sum, item) => sum + (item.product?.price || 0) * item.quantity, 0);
   const cartTax = cartSubtotal * 0.18;
   const cartTotal = cartSubtotal + cartTax;
 
-  const checkoutCart = () => {
+  const checkoutCart = async () => {
     if (cart.length === 0) return;
 
     if (balance < cartTotal) {
@@ -252,7 +268,7 @@ function App() {
     setLastOrderDetails(orderDetails);
 
     // Log transaction in sandbox ledger
-    const itemSummaries = cart.map(item => `${item.product.name} (x${item.quantity})`).join(', ');
+    const itemSummaries = cart.map(item => `${item.product?.name || 'Product'} (x${item.quantity})`).join(', ');
     const newTx = {
       title: `Checkout: Order ${randomOrderId} - ${itemSummaries}`,
       date: dateStr,
@@ -260,17 +276,27 @@ function App() {
     };
     setTransactions(prev => [newTx, ...prev]);
 
-    // Clear cart and route to success page
+    // Clear cart in backend & frontend, route to success page
+    try {
+      await cartService.clearCart();
+    } catch (error) {
+      console.error('Error clearing backend cart:', error);
+    }
     setCart([]);
     setDashboardView('success');
     showToast(`Order ${randomOrderId} placed successfully!`);
   };
 
   // Direct checkout option: adds single item to cart and forwards directly to checkout
-  const buyNow = (product) => {
-    setCart([{ product, quantity: 1 }]);
-    setDashboardView('cart');
-    showToast(`Staged "${product.name}" for instant checkout below.`);
+  const buyNow = async (product) => {
+    try {
+      await cartService.addToCart(product._id, 1);
+      await fetchCart();
+      setDashboardView('cart');
+      showToast(`Staged "${product.name}" for instant checkout below.`);
+    } catch (error) {
+      showToast('Failed to process buy now: ' + error.message, 'error');
+    }
   };
 
   const addSandboxFunds = () => {
