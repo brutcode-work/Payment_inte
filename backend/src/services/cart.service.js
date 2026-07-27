@@ -26,3 +26,17 @@ export const calculateSum = async (userId) => {
 export const calculateGst = (amount, gstPercent) => {
   return amount * (gstPercent / 100);
 };
+
+export const createCartSummary = async (userId, gstPercent = 18) => {
+  try {
+    const subtotal = Number((await calculateSum(userId)) || 0);
+    const gstAmount = Number(calculateGst(subtotal, gstPercent).toFixed(2));
+    const grandtotal = Number((subtotal + gstAmount).toFixed(2));
+
+    return { subtotal, gstAmount, grandtotal };
+  } catch (err) {
+    console.error("Error creating cart summary:", err);
+    throw err;
+  }
+};
+
