@@ -73,7 +73,9 @@ function App() {
     try {
       const response = await cartService.getCart();
       if (response && response.cart && Array.isArray(response.cart.items)) {
-        const validItems = response.cart.items.filter((item) => item.product != null);
+        const validItems = response.cart.items.filter(
+          (item) => item.product != null,
+        );
         setCart(validItems);
         setCartSummary({
           subtotal: Number(response.subtotal || 0),
@@ -122,14 +124,20 @@ function App() {
     } catch (error) {
       showToast(
         error.message || "Login failed. Please check your credentials.",
-        "error"
+        "error",
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRegister = async ({ name, email, mobile, password, confirmPassword }) => {
+  const handleRegister = async ({
+    name,
+    email,
+    mobile,
+    password,
+    confirmPassword,
+  }) => {
     if (!name.trim() || !email.trim() || !mobile.trim() || !password) {
       showToast("All fields are required", "error");
       return;
@@ -228,7 +236,10 @@ function App() {
     if (cart.length === 0) return;
 
     if (balance < cartTotal) {
-      showToast("Insufficient sandbox balance! Add funds to complete checkout.", "error");
+      showToast(
+        "Insufficient sandbox balance! Add funds to complete checkout.",
+        "error",
+      );
       return;
     }
 
@@ -238,7 +249,10 @@ function App() {
       console.log("Checkout response:", checkoutResponse);
     } catch (error) {
       console.error("Error during checkout API call:", error);
-      showToast("Checkout failed: " + (error.response?.data?.message || error.message), "error");
+      showToast(
+        "Checkout failed: " + (error.response?.data?.message || error.message),
+        "error",
+      );
       return;
     }
 

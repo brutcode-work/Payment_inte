@@ -1,4 +1,4 @@
-import { createCartSummary } from "../services/cart.service";
+import { createCartSummary } from "../services/cart.service.js";
 import { razorpay } from "../services/razorpay.js";
 export const createOrder = async (req, res) => {
   try {
@@ -6,10 +6,12 @@ export const createOrder = async (req, res) => {
     const summary = await createCartSummary(userId);
 
     const razorpayOrder = await razorpay.orders.create({
-      amount: summary.grandtotal,
+      amount: Number(summary.grandtotal * 100),
       currency: "INR",
       receipt: `order_${Date.now()}`,
     });
+
+    razorpayOrder.keyId = process.env.RAZORPAY_KEY;
 
     res.status(200).json({
       success: true,
