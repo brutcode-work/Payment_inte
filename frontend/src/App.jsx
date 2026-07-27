@@ -15,6 +15,11 @@ function App() {
   // Products & Cart State
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [cartSummary, setCartSummary] = useState({
+    subtotal: 0,
+    gstAmount: 0,
+    grandtotal: 0,
+  });
   const [balance, setBalance] = useState(500.0); // Sandbox balance in INR
   const [transactions, setTransactions] = useState([
     {
@@ -89,9 +94,19 @@ function App() {
           (item) => item.product != null,
         );
         setCart(validItems);
+        setCartSummary({
+          subtotal: Number(response.subtotal || 0),
+          gstAmount: Number(response.gstAmount || 0),
+          grandtotal: Number(response.grandtotal || 0),
+        });
+      } else {
+        setCart([]);
+        setCartSummary({ subtotal: 0, gstAmount: 0, grandtotal: 0 });
       }
     } catch (error) {
       console.error("Error fetching cart:", error);
+      setCart([]);
+      setCartSummary({ subtotal: 0, gstAmount: 0, grandtotal: 0 });
     }
   };
 
@@ -258,13 +273,10 @@ function App() {
     }
   };
 
-  // E-Commerce Checkout flow: Subtotal + Taxes (18% GST)
-  const cartSubtotal = cart.reduce(
-    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
-    0,
-  );
-  const cartTax = cartSubtotal * 0.18;
-  const cartTotal = cartSubtotal + cartTax;
+  // Cart totals are provided by the backend
+  const cartSubtotal = cartSummary.subtotal;
+  const cartTax = cartSummary.gstAmount;
+  const cartTotal = cartSummary.grandtotal;
 
   const checkoutCart = async () => {
     if (cart.length === 0) return;
