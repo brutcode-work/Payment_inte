@@ -243,21 +243,24 @@ function App() {
       return;
     }
 
+    let checkoutResponse;
     try {
-      // Trigger order creation service call
-      const checkoutResponse = await handleCheckout();
+      // Trigger order creation & await payment verification
+      checkoutResponse = await handleCheckout();
       console.log("Checkout response:", checkoutResponse);
     } catch (error) {
-      console.error("Error during checkout API call:", error);
+      console.error("Error during checkout:", error);
       showToast(
-        "Checkout failed: " + (error.response?.data?.message || error.message),
+        "Checkout not completed: " + (error.response?.data?.message || error.message),
         "error",
       );
       return;
     }
 
+    // Payment has been verified successfully by backend, and backend has cleared DB cart
     setBalance((prev) => prev - cartTotal);
 
+    const serverOrder = checkoutResponse?.verifyData?.order;
     const now = new Date();
     const dateStr =
       now.toLocaleDateString("en-US", {
@@ -268,10 +271,10 @@ function App() {
       " • " +
       now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-    const randomOrderId = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+    const orderId = serverOrder?.razorpayOrderId || "ORD-" + Math.floor(100000 + Math.random() * 900000);
 
     const orderDetails = {
-      orderId: randomOrderId,
+      orderId: orderId,
       items: [...cart],
       subtotal: cartSubtotal,
       tax: cartTax,
@@ -280,14 +283,10 @@ function App() {
     };
     setLastOrderDetails(orderDetails);
 
-    try {
-      await cartService.clearCart();
-    } catch (error) {
-      console.error("Error clearing backend cart:", error);
-    }
+    // Reset local frontend cart state (backend cart has already been cleared upon payment verification)
     setCart([]);
     setDashboardView("success");
-    showToast(`Order ${randomOrderId} placed successfully!`);
+    showToast(`Order ${orderId} placed successfully!`);
   };
 
   const buyNow = async (product) => {

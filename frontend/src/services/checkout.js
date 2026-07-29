@@ -14,7 +14,7 @@ const loadRazorpayScript = () => {
   });
 };
 
-export const handleCheckout = async (onSuccess) => {
+export const handleCheckout = async () => {
   const isLoaded = await loadRazorpayScript();
   if (!isLoaded) {
     throw new Error(
@@ -28,45 +28,55 @@ export const handleCheckout = async (onSuccess) => {
     throw new Error("Failed to create order on server.");
   }
 
-  const { id, amount, currency } = data.razorpayOrder;
+  const { id, amount, currency, keyId } = data.razorpayOrder;
 
-  const options = {
-    key: import.meta.env.VITE_RAZORPAY_KEY,
-    amount: amount,
-    currency: currency || "INR",
-    name: "Payment Integration Store",
-    description: "Order Payment",
-    order_id: id,
-    handler: async (response) => {
-      try {
-        const verifyRes = await axiosInstance.post("/order/verify", {
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_signature: response.razorpay_signature,
-        });
+  return new Promise((resolve, reject) => {
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY || keyId,
+      amount: amount,
+      currency: currency || "INR",
+      name: "Payment Integration Store",
+      description: "Order Payment",
+      order_id: id,
+      handler: async (response) => {
+        try {
+          const verifyRes = await axiosInstance.post("/order/verify", {
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature,
+          });
 
-        if (verifyRes.data?.success) {
-          if (onSuccess) {
-            onSuccess(verifyRes.data, response);
+          if (verifyRes.data?.success) {
+            resolve({
+              verifyData: verifyRes.data,
+              razorpayResponse: response,
+            });
+          } else {
+            reject(
+              new Error(
+                verifyRes.data?.message || "Payment verification failed.",
+              ),
+            );
           }
-        } else {
-          alert("Payment verification failed. Please contact support.");
+        } catch (error) {
+          console.error("Error during payment verification:", error);
+          reject(error);
         }
-      } catch (error) {
-        console.error("Error during payment verification:", error);
-        alert(
-          "Payment verification failed: " +
-            (error.response?.data?.message || error.message),
-        );
-      }
-    },
-    theme: {
-      color: "#000000",
-    },
-  };
+      },
+      modal: {
+        ondismiss: () => {
+          reject(new Error("Payment cancelled by user."));
+        },
+      },
+      theme: {
+        color: "#000000",
+      },
+    };
 
-  const razorpayInstance = new window.Razorpay(options);
-  razorpayInstance.open();
+    const razorpayInstance = new window.Razorpay(options);
+    razorpayInstance.open();
+  });
 };
 
 export default handleCheckout;
+
