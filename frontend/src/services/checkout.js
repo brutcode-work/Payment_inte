@@ -17,7 +17,9 @@ const loadRazorpayScript = () => {
 export const handleCheckout = async (onSuccess) => {
   const isLoaded = await loadRazorpayScript();
   if (!isLoaded) {
-    throw new Error("Razorpay SDK failed to load. Please check your network connection.");
+    throw new Error(
+      "Razorpay SDK failed to load. Please check your network connection.",
+    );
   }
 
   const { data } = await axiosInstance.post("/order/create-order");
@@ -26,10 +28,10 @@ export const handleCheckout = async (onSuccess) => {
     throw new Error("Failed to create order on server.");
   }
 
-  const { id, amount, currency, keyId } = data.razorpayOrder;
+  const { id, amount, currency } = data.razorpayOrder;
 
   const options = {
-    key: keyId || import.meta.env.VITE_RAZORPAY_KEY,
+    key: import.meta.env.VITE_RAZORPAY_KEY,
     amount: amount,
     currency: currency || "INR",
     name: "Payment Integration Store",
@@ -37,12 +39,25 @@ export const handleCheckout = async (onSuccess) => {
     order_id: id,
     handler: async (response) => {
       try {
-        const verifyRes = await axiosInstance.post("/order/verify", response);
-        if (onSuccess) {
-          onSuccess(verifyRes.data, response);
+        const verifyRes = await axiosInstance.post("/order/verify", {
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+        });
+
+        if (verifyRes.data?.success) {
+          if (onSuccess) {
+            onSuccess(verifyRes.data, response);
+          }
+        } else {
+          alert("Payment verification failed. Please contact support.");
         }
       } catch (error) {
         console.error("Error during payment verification:", error);
+        alert(
+          "Payment verification failed: " +
+            (error.response?.data?.message || error.message),
+        );
       }
     },
     theme: {

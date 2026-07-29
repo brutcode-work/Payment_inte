@@ -1,8 +1,12 @@
 import { Router } from "express";
-const router =  Router()
+import { createOrder, verify } from "../controllers/payment.controller.js";
+import protect from "../middleware/protect.js";
 
-router.post("/create-order",(req,res) => {
-    const {cartId} = req.body
-})
+const router = Router();
 
-export default router
+router.use(protect);
+
+router.post("/create-order", createOrder);
+router.post("/verify", verify);
+
+export default router;

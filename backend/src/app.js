@@ -5,13 +5,20 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.route.js";
 import productRouter from "./routes/product.route.js";
 import cartRouter from "./routes/cart.route.js";
-import orderRouter from "./routes/order.routes.js";
+import orderRouter from "./routes/payment.route.js";
 
 const app = express();
-app.use(cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"],
-    credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:5174",
+    ],
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
